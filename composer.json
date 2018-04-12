@@ -1,0 +1,28 @@
+{
+    "name": "bigreja/superbraga",
+    "description": "Tema para o Superbraga.com",
+    "type": "silverstripe-theme",
+    "keywords": ["silverstripe", "theme"],
+    "license": "BSD-3-Clause",
+    "authors": [
+        {
+            "name": "Bruno Igreja",
+            "homepage": "http://www.superbraga.com"
+        }
+    ],
+    "require": {
+        "composer/installers": "*",
+        "silverstripe/framework": ">=3.5"
+    },
+	"extra": {
+		"branch-alias": {
+			"dev-master": "1.x-dev"
+		},
+        "expose": [
+            "css",
+            "images",
+            "javascript",
+            "webfonts"
+        ]
+	}
+}
