@@ -16,17 +16,20 @@
     isRtl = $html.attr("dir") === "rtl",
     isIE = userAgent.indexOf("msie") !== -1 ? parseInt(userAgent.split("msie")[1], 10) : userAgent.indexOf("trident") !== -1 ? 11 : userAgent.indexOf("edge") !== -1 ? 12 : false,
     isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
-    onloadCaptchaCallback,
+
+    windowReady = false,
+    isNoviBuilder = false,
+    preloaderAnimateionDuration = 300,
+    loaderTimeoutId,
+
     plugins = {
-      animsitionPreloader: $('.animsition-overlay'),
-      pointerEvents: isIE < 11 ? "js/pointer-events.min.js" : false,
+      preloader: $("#preloader"),
       bootstrapTooltip: $("[data-toggle='tooltip']"),
       bootstrapModalDialog: $('.modal'),
       bootstrapTabs: $(".tabs-custom"),
       bootstrapCollapse: $(".card-custom"),
       rdNavbar: $(".rd-navbar"),
       materialParallax: $(".parallax-container"),
-      rdGoogleMaps: $(".rd-google-map"),
       rdMailForm: $(".rd-mailform"),
       rdInputLabel: $(".form-label"),
       regula: $("[data-constraints]"),
@@ -37,7 +40,6 @@
       search: $(".rd-search"),
       searchResults: $('.rd-search-results'),
       statefulButton: $('.btn-stateful'),
-      isotope: $(".isotope"),
       popover: $('[data-toggle="popover"]'),
       viewAnimate: $('.view-animate'),
       radio: $("input[type='radio']"),
@@ -47,7 +49,6 @@
       progressLinear: $(".progress-linear"),
       progressBar: $(".progress-bar-js"),
       dateCountdown: $('.DateCountdown'),
-      preloader: $(".preloader"),
       captcha: $('.recaptcha'),
       lightGallery: $("[data-lightgallery='group']"),
       lightGalleryItem: $("[data-lightgallery='item']"),
@@ -56,100 +57,42 @@
       campaignMonitor: $('.campaign-mailform'),
       copyrightYear: $(".copyright-year"),
       selectFilter: $("select"),
-      instafeed: $(".instafeed"),
       inlineToggle: $('.inline-toggle'),
       focusToggle: $('.focus-toggle'),
       countDown: $(".countdown"),
       stepper: $("input[type='number']"),
       doughnutChart: $(".doughnut-chart"),
       radioPanel: $('.radio-panel .radio-inline'),
-      themeSwitcher: $("[data-color-picker], [data-theme-name]")
+      slick: $('.slick-slider'),
+      videoOverlay: $('.video-overlay'),
     };
 
-  /**
-   * Initialize All Scripts
-   */
+  // Initialize All Scripts
   $(function () {
-    var isNoviBuilder = window.xMode;
+    isNoviBuilder = window.xMode;
 
-    /**
-     * themeSwitcher
-     */
-    if (plugins.themeSwitcher.length) {
-      var loaderTimeoutId;
-
-      document.documentElement.addEventListener('theme-switching', function () {
-        loaderTimeoutId = setTimeout(function () {
-          plugins.preloader.removeClass("loaded");
-        }, 50);
-      });
-
-      document.documentElement.addEventListener('theme-switched', function () {
-        clearTimeout(loaderTimeoutId);
-        setTimeout(function () {
-          plugins.preloader.addClass("loaded");
-
-        }, 400);
-      });
-
-      themeSwitcher({
-        themes: {
-          soccer: {
-            stylesFile: 'css/style.css'
-          },
-          baseball: {
-            stylesFile: 'css/style-baseball.css'
-          },
-          basketball: {
-            stylesFile: 'css/style-basketball.css'
-          },
-          billiards: {
-            stylesFile: 'css/style-billiards.css'
-          },
-          bowling: {
-            stylesFile: 'css/style-bowling.css'
-          },
-          rugby: {
-            stylesFile: 'css/style-rugby.css'
-          }
+    // Page loader & Page transition
+    if (plugins.preloader.length && !isNoviBuilder) {
+      pageTransition({
+        target: document.querySelector('.page'),
+        delay: 100,
+        duration: preloaderAnimateionDuration,
+        classIn: 'fadeIn',
+        classOut: 'fadeOut',
+        classActive: 'animated',
+        conditions: function (event, link) {
+          return !/(\#|callto:|tel:|mailto:|:\/\/)/.test(link) && !event.currentTarget.hasAttribute('data-lightgallery');
+        },
+        onTransitionStart: function ( options ) {
+          setTimeout( function () {
+            plugins.preloader.removeClass('loaded');
+          }, options.duration * .75 );
+        },
+        onReady: function () {
+          plugins.preloader.addClass('loaded');
+          windowReady = true;
         }
       });
-    }
-
-
-    /**
-     * Animsition
-     * @description A simple and easy jQuery plugin for CSS animated page transitions.
-     * @link http://git.blivesta.com/animsition/
-     */
-    if (plugins.animsitionPreloader && !isNoviBuilder) {
-      plugins.animsitionPreloader.animsition({
-        inClass: 'fade-in',
-        outClass: 'fade-out',
-        inDuration: 800,
-        outDuration: 800,
-        linkElement: 'a:not([target="_blank"]):not([href^="#"]):not([class*="lg-trigger"]):not([href^="images"]):not([data-lightgallery="group-item"])', // e.g. linkElement: 'a:not([target="_blank"]):not([href^="#"])'
-        loading: true,
-        loadingParentElement: 'html', //animsition wrapper element
-        loadingClass: 'animsition-loading',
-        loadingInner: '', // e.g '<img src="assets/img/loading.svg" />'
-        timeout: true,
-        timeoutCountdown: 100,
-        onLoadEvent: true,
-        browser: ['animation-duration', '-webkit-animation-duration', '-o-animation-duration'], // "browser" option allows you to disable the "animsition" in case the css property in the array is not supported by your browser. The default setting is to disable the "animsition" in a browser that does not support "animation-duration".
-        overlay: false,
-        overlayClass: 'animsition-overlay-slide',
-        overlayParentElement: 'body',
-        transition: function (url) {
-          window.location.href = url;
-        }
-      })
-        .one('animsition.inStart', function () {
-          plugins.preloader.addClass("loaded");
-        })
-        .one('animsition.outStart', function () {
-          plugins.preloader.addClass("loaded");
-        });
     }
 
     /**
@@ -203,8 +146,8 @@
     }
 
     /**
-     * toggleSwiperCaptionAnimation
-     * @description  toggle swiper animations on active slides
+     * @desc Toggle swiper animations on active slides
+     * @param {object} swiper - swiper slider
      */
     function toggleSwiperCaptionAnimation(swiper) {
       var prevSlide = $(swiper.container).find("[data-caption-animate]"),
@@ -240,7 +183,11 @@
         delay = nextSlideItem.attr("data-caption-delay");
         duration = nextSlideItem.attr('data-caption-duration');
         if (!isNoviBuilder) {
-          setTimeout(tempFunction(nextSlideItem, duration), parseInt(delay, 10));
+          if (delay) {
+            setTimeout(tempFunction(nextSlideItem, duration), parseInt(delay, 10));
+          } else {
+            setTimeout(tempFunction(nextSlideItem, duration), 0);
+          }
 
         } else {
           nextSlideItem.removeClass("not-animated")
@@ -623,11 +570,16 @@
 
     /**
      * Is Mac os
-     * @description  add additional class on html if mac os.
      */
     if (navigator.platform.match(/(Mac)/i)) $html.addClass("mac-os");
 
 
+    /**
+     * Is Firefox
+     */
+    if (typeof InstallTrigger !== 'undefined') $html.addClass("firefox");
+    
+    
     /**
      * IE Polyfills
      * @description  Adds some loosing functionality to IE browsers
@@ -789,6 +741,9 @@
       }
     }
 
+    /**
+     * Bootstrap Collapse
+     */
     if (plugins.bootstrapCollapse.length) {
       for (var i = 0; i < plugins.bootstrapCollapse.length; i++) {
         var $bootstrapCollapseItem = $(plugins.bootstrapCollapse[i]);
@@ -796,14 +751,12 @@
         $bootstrapCollapseItem.on('show.bs.collapse', (function ($bootstrapCollapseItem) {
           return function () {
             $bootstrapCollapseItem.addClass('active');
-            console.log('active');
           };
         })($bootstrapCollapseItem));
 
         $bootstrapCollapseItem.on('hide.bs.collapse', (function ($bootstrapCollapseItem) {
           return function () {
             $bootstrapCollapseItem.removeClass('active');
-            console.log('disactive');
           };
         })($bootstrapCollapseItem));
       }
@@ -835,90 +788,7 @@
         });
       }
     }
-
-
-    /**
-     * RD Google Maps
-     * @description Enables RD Google Maps plugin
-     */
-    if (plugins.rdGoogleMaps.length) {
-      $.getScript("//maps.google.com/maps/api/js?key=AIzaSyAwH60q5rWrS8bXwpkZwZwhw9Bw0pqKTZM&sensor=false&libraries=geometry,places&v=3.7", function () {
-        var head = document.getElementsByTagName('head')[0],
-          insertBefore = head.insertBefore;
-
-        head.insertBefore = function (newElement, referenceElement) {
-          if (newElement.href && newElement.href.indexOf('//fonts.googleapis.com/css?family=Roboto') !== -1 || newElement.innerHTML.indexOf('gm-style') !== -1) {
-            return;
-          }
-          insertBefore.call(head, newElement, referenceElement);
-        };
-
-        for (var i = 0; i < plugins.rdGoogleMaps.length; i++) {
-          var $googleMapItem = $(plugins.rdGoogleMaps[i]);
-
-          lazyInit($googleMapItem, $.proxy(function () {
-            var $this = $(this),
-              styles = $this.attr("data-styles");
-
-            $this.googleMap({
-              marker: {
-                basic: $this.data('marker'),
-                active: $this.data('marker-active')
-              },
-              styles: styles ? JSON.parse(styles) : [],
-              onInit: function (map) {
-                var inputAddress = $('#rd-google-map-address');
-
-
-                if (inputAddress.length) {
-                  var input = inputAddress;
-                  var geocoder = new google.maps.Geocoder();
-                  var marker = new google.maps.Marker(
-                    {
-                      map: map,
-                      icon: $this.data('marker-url')
-                    }
-                  );
-
-                  var autocomplete = new google.maps.places.Autocomplete(inputAddress[0]);
-                  autocomplete.bindTo('bounds', map);
-                  inputAddress.attr('placeholder', '');
-                  inputAddress.on('change', function () {
-                    $("#rd-google-map-address-submit").trigger('click');
-                  });
-                  inputAddress.on('keydown', function (e) {
-                    if (e.keyCode === 13) {
-                      $("#rd-google-map-address-submit").trigger('click');
-                    }
-                  });
-
-
-                  $("#rd-google-map-address-submit").on('click', function (e) {
-                    e.preventDefault();
-                    var address = input.val();
-                    geocoder.geocode({'address': address}, function (results, status) {
-                      if (status === google.maps.GeocoderStatus.OK) {
-                        var latitude = results[0].geometry.location.lat();
-                        var longitude = results[0].geometry.location.lng();
-
-                        map.setCenter(new google.maps.LatLng(
-                          parseFloat(latitude),
-                          parseFloat(longitude)
-                        ));
-                        marker.setPosition(new google.maps.LatLng(
-                          parseFloat(latitude),
-                          parseFloat(longitude)
-                        ))
-                      }
-                    });
-                  });
-                }
-              }
-            });
-          }, $googleMapItem));
-        }
-      });
-    }
+    
 
     /**
      * Radio
@@ -1103,6 +973,11 @@
 
             if (navbarSearch) {
               navbarSearch.val('').trigger('propertychange');
+            }
+
+            var navbarSelect = plugins.rdNavbar.find('.select2-container');
+            if(navbarSelect.length) {
+              navbarSelect.select2("close");
             }
           },
           onDropdownOver: function () {
@@ -1329,71 +1204,6 @@
           }
         })(s)).trigger("resize");
       }
-    }
-
-
-    /**
-     * Isotope
-     * @description Enables Isotope plugin
-     */
-    if (plugins.isotope.length) {
-      var isogroup = [];
-      for (var i = 0; i < plugins.isotope.length; i++) {
-        var isotopeItem = plugins.isotope[i],
-          isotopeInitAttrs = {
-            itemSelector: '.isotope-item',
-            layoutMode: isotopeItem.getAttribute('data-isotope-layout') ? isotopeItem.getAttribute('data-isotope-layout') : 'masonry',
-            filter: '*'
-          };
-
-        if (isotopeItem.getAttribute('data-column-width')) {
-          isotopeInitAttrs.masonry = {
-            columnWidth: parseFloat(isotopeItem.getAttribute('data-column-width'))
-          };
-        } else if (isotopeItem.getAttribute('data-column-class')) {
-          isotopeInitAttrs.masonry = {
-            columnWidth: isotopeItem.getAttribute('data-column-class')
-          };
-        }
-
-        var iso = new Isotope(isotopeItem, isotopeInitAttrs);
-        isogroup.push(iso);
-      }
-
-
-      setTimeout(function () {
-        var i;
-        for (i = 0; i < isogroup.length; i++) {
-          isogroup[i].element.className += " isotope--loaded";
-          isogroup[i].layout();
-        }
-      }, 600);
-
-      var resizeTimout;
-
-      $("[data-isotope-filter]").on("click", function (e) {
-        e.preventDefault();
-        var filter = $(this);
-        clearTimeout(resizeTimout);
-        filter.parents(".isotope-filters").find('.active').removeClass("active");
-        filter.addClass("active");
-        var iso = $('.isotope[data-isotope-group="' + this.getAttribute("data-isotope-group") + '"]'),
-          isotopeAttrs = {
-            itemSelector: '.isotope-item',
-            layoutMode: iso.attr('data-isotope-layout') ? iso.attr('data-isotope-layout') : 'masonry',
-            filter: this.getAttribute("data-isotope-filter") === '*' ? '*' : '[data-filter*="' + this.getAttribute("data-isotope-filter") + '"]'
-          };
-        if (iso.attr('data-column-width')) {
-          isotopeAttrs.masonry = {
-            columnWidth: parseFloat(iso.attr('data-column-width'))
-          };
-        } else if (iso.attr('data-column-class')) {
-          isotopeAttrs.masonry = {
-            columnWidth: iso.attr('data-column-class')
-          };
-        }
-        iso.isotope(isotopeAttrs);
-      }).eq(0).trigger("click")
     }
 
 
@@ -1998,23 +1808,7 @@
     if (plugins.rdRange.length && !isNoviBuilder) {
       plugins.rdRange.RDRange({});
     }
-
-
-    /**
-     * RD Instafeed JS
-     * @description Enables Instafeed JS
-     */
-    if (plugins.instafeed.length > 0) {
-      var i;
-      for (i = 0; i < plugins.instafeed.length; i++) {
-        var instafeedItem = $(plugins.instafeed[i]);
-        instafeedItem.RDInstafeed({
-          accessToken: '5526956400.ba4c844.c832b2a554764bc8a1c66c39e99687d7',
-          clientId: ' c832b2a554764bc8a1c66c39e99687d7',
-          userId: '5526956400'
-        });
-      }
-    }
+    
 
     if (plugins.inlineToggle.length) {
       for (var i = 0; i < plugins.inlineToggle.length; i++) {
@@ -2080,7 +1874,7 @@
 
         // Classic style
         if ($countDownItem.attr('data-style') === 'short') {
-          settings['labels'] = ['Yeas', 'Mons', 'Weks', 'Days', 'Hors', 'Mins', 'Secs'];
+          settings['labels'] = ['Yeas', 'Mons', 'Weks', 'Days', 'Hrs', 'Mins', 'Secs'];
         }
 
         d.setTime(Date.parse(time)).toLocaleString();
@@ -2124,9 +1918,7 @@
       }
     }
 
-    /**
-     * Radio Panel
-     */
+    // Radio Panel
     if (plugins.radioPanel) {
       for (var i = 0; i < plugins.radioPanel.length; i++) {
         var $element = $(plugins.radioPanel[i]);
@@ -2137,5 +1929,93 @@
       }
     }
 
+    /**
+     * Slick carousel
+     * @description  Enable Slick carousel plugin
+     */
+    if (plugins.slick.length) {
+      for (var i = 0; i < plugins.slick.length; i++) {
+        var $slickItem = $(plugins.slick[i]);
+
+        $slickItem.on('init', function (slick) {
+          initLightGallery($(slick).find('[data-lightgallery="item"]'), 'lightGallery-in-carousel');
+        });
+
+        $slickItem.slick({
+          slidesToScroll: parseInt($slickItem.attr('data-slide-to-scroll'), 10) || 1,
+          asNavFor: $slickItem.attr('data-for') || false,
+          dots: $slickItem.attr("data-dots") === "true",
+          infinite: isNoviBuilder ? false : $slickItem.attr("data-loop") === "true",
+          focusOnSelect: true,
+          arrows: $slickItem.attr("data-arrows") === "true",
+          swipe: $slickItem.attr("data-swipe") === "true",
+          autoplay: isNoviBuilder ? false : $slickItem.attr("data-autoplay") === "true",
+          autoplaySpeed: $slickItem.attr("data-autoplay-speed") ? parseInt($slickItem.attr("data-autoplay-speed")) : 3500,
+          vertical: $slickItem.attr("data-vertical") === "true",
+          centerMode: $slickItem.attr("data-center-mode") === "true",
+          centerPadding: $slickItem.attr("data-center-padding") ? $slickItem.attr("data-center-padding") : '0.50',
+          mobileFirst: true,
+          rtl: isRtl,
+          responsive: [
+            {
+              breakpoint: 0,
+              settings: {
+                slidesToShow: parseInt($slickItem.attr('data-items'), 10) || 1
+              }
+            },
+            {
+              breakpoint: 575,
+              settings: {
+                slidesToShow: parseInt($slickItem.attr('data-sm-items'), 10) || 1
+              }
+            },
+            {
+              breakpoint: 767,
+              settings: {
+                slidesToShow: parseInt($slickItem.attr('data-md-items'), 10) || 1
+              }
+            },
+            {
+              breakpoint: 991,
+              settings: {
+                slidesToShow: parseInt($slickItem.attr('data-lg-items'), 10) || 1
+              }
+            },
+            {
+              breakpoint: 1199,
+              settings: {
+                slidesToShow: parseInt($slickItem.attr('data-xl-items'), 10) || 1
+              }
+            }
+          ]
+        })
+          .on('afterChange', function (event, slick, currentSlide, nextSlide) {
+            var $this = $(this),
+              childCarousel = $this.attr('data-child');
+
+            if (childCarousel) {
+              $(childCarousel + ' .slick-slide').removeClass('slick-current');
+              $(childCarousel + ' .slick-slide').eq(currentSlide).addClass('slick-current');
+            }
+          });
+      }
+    }
+
+    // Video Overlay
+    if (plugins.videoOverlay.length) {
+      for (var i = 0; i < plugins.videoOverlay.length; i++) {
+        var overlay = plugins.videoOverlay[i];
+        if (overlay) {
+          overlay.style.opacity = '1';
+          overlay.addEventListener('click', function (e) {
+            $(this).animate({
+              opacity: 0
+            }, function () {
+              this.style.display = 'none';
+            });
+          });
+        }
+      }
+    }
   });
 }());
